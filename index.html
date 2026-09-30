@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CNPJE Jalisco</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<style>
+:root{
+  --pje-azul:#18345D; --pje-profundo:#002060; --pje-medio:#203A80; --pje-alt:#014574;
+  --pje-s4:#5B8BBC; --pje-claro:#C9D5E6; --pje-palido:#CADCFC; --pje-sup:#F4F7FB;
+  --pje-naranja:#F08013; --pje-dorado:#C8860A; --pje-texto:#333333; --pje-suave:#5B6B80;
+  --pje-verde:#2E7D32; --pje-rojo:#B3261E; --pje-linea:#E3E9F2; --pje-bg:#FFFFFF;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;color:var(--pje-texto);background:var(--pje-sup);
+  -webkit-text-size-adjust:100%}
+#PJE_app{max-width:1180px;margin:0 auto;padding:0 12px 48px}
+
+/* ---------- header: <=20% de pantalla en movil ---------- */
+#PJE_header{background:var(--pje-azul);color:#fff;margin:0 -12px;padding:10px 14px 8px;
+  position:sticky;top:0;z-index:30;box-shadow:0 2px 10px rgba(24,52,93,.18)}
+#PJE_header .PJE_marcas{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  font-size:10px;letter-spacing:.02em;color:var(--pje-palido);text-transform:uppercase}
+#PJE_header h1{font-family:Poppins,Arial,sans-serif;font-weight:800;font-size:17px;margin:4px 0 2px;
+  line-height:1.15}
+#PJE_header .PJE_sub{font-size:11px;color:var(--pje-palido);margin-bottom:6px}
+#PJE_estado{font-size:10.5px;color:var(--pje-palido)}
+#PJE_estado b{color:var(--pje-naranja);font-weight:600}
+
+/* ---------- tabs ---------- */
+#PJE_tabs{display:flex;gap:4px;overflow-x:auto;margin:0 -14px;padding:0 14px;
+  scrollbar-width:none}
+#PJE_tabs::-webkit-scrollbar{display:none}
+#PJE_tabs button{flex:0 0 auto;background:transparent;border:0;border-bottom:2.5px solid transparent;
+  color:var(--pje-palido);font-family:Poppins,Arial,sans-serif;font-size:12px;font-weight:600;
+  padding:7px 9px;cursor:pointer;white-space:nowrap}
+#PJE_tabs button[aria-selected="true"]{color:#fff;border-bottom-color:var(--pje-naranja)}
+
+/* ---------- controles ---------- */
+#PJE_barra{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0 4px}
+#PJE_barra label{font-size:11px;color:var(--pje-suave);font-weight:bold}
+#PJE_barra select{font-family:Arial;font-size:12px;padding:5px 8px;border:1px solid var(--pje-claro);
+  border-radius:6px;background:#fff;color:var(--pje-azul);font-weight:bold}
+.PJE_btn{font-family:Arial;font-size:11px;padding:5px 10px;border:1px solid var(--pje-claro);
+  border-radius:6px;background:#fff;color:var(--pje-azul);cursor:pointer;font-weight:bold}
+.PJE_btn:hover{background:var(--pje-sup)}
+
+/* ---------- KPI ---------- */
+.PJE_kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:10px 0 4px}
+.PJE_kpi{border:1.5px solid var(--pje-azul);border-radius:8px;background:var(--pje-bg);
+  padding:10px 11px;min-height:84px;display:flex;flex-direction:column;justify-content:center}
+.PJE_kpi .PJE_cif{font-family:Poppins,Arial,sans-serif;font-weight:600;font-size:21px;
+  color:var(--pje-azul);line-height:1.05}
+.PJE_kpi .PJE_lab{font-size:9.5px;color:var(--pje-suave);margin-top:4px;line-height:1.25}
+.PJE_kpi .PJE_var{font-size:10.5px;font-weight:bold;margin-top:3px}
+.PJE_up{color:var(--pje-rojo)} .PJE_down{color:var(--pje-verde)} .PJE_flat{color:var(--pje-suave)}
+.PJE_kpi.PJE_good .PJE_up{color:var(--pje-verde)} .PJE_kpi.PJE_good .PJE_down{color:var(--pje-rojo)}
+
+/* ---------- paneles ---------- */
+.PJE_panel{background:var(--pje-bg);border:1px solid var(--pje-linea);border-radius:10px;
+  padding:12px 12px 8px;margin:12px 0}
+.PJE_panel h3{font-family:Poppins,Arial,sans-serif;font-size:13.5px;font-weight:600;
+  color:var(--pje-azul);margin:0 0 3px}
+.PJE_panel .PJE_nota{font-size:11px;color:var(--pje-suave);margin:0 0 8px;line-height:1.35}
+.PJE_lienzo{width:100%;height:320px}
+.PJE_duo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:760px){.PJE_duo{grid-template-columns:1fr}.PJE_lienzo{height:280px}}
+.PJE_fuente{font-size:9.5px;color:var(--pje-suave);margin-top:6px;border-top:1px solid var(--pje-linea);
+  padding-top:5px}
+.PJE_hallazgo{border-left:3px solid var(--pje-naranja);background:var(--pje-sup);
+  padding:8px 10px;margin:8px 0;font-size:11.5px;line-height:1.45;border-radius:0 6px 6px 0}
+.PJE_hallazgo b{color:var(--pje-azul)}
+.PJE_seccion{display:none}
+.PJE_seccion.PJE_on{display:block}
+
+/* ---------- tabla ---------- */
+.PJE_tablaWrap{overflow-x:auto}
+table.PJE_t{width:100%;border-collapse:collapse;font-size:11.5px;min-width:620px}
+table.PJE_t th{background:var(--pje-azul);color:#fff;font-family:Poppins,Arial,sans-serif;
+  font-weight:600;font-size:10.5px;padding:7px 6px;text-align:right;position:sticky;top:0}
+table.PJE_t th:first-child{text-align:left}
+table.PJE_t td{padding:6px;border-bottom:1px solid var(--pje-linea);text-align:right;
+  font-variant-numeric:tabular-nums}
+table.PJE_t td:first-child{text-align:left;color:var(--pje-azul)}
+table.PJE_t tr:nth-child(even) td{background:#FBFCFE}
+table.PJE_t tr.PJE_grupo td{background:var(--pje-claro);color:var(--pje-azul);font-weight:bold;
+  font-family:Poppins,Arial,sans-serif;font-size:11px}
+footer{font-size:10px;color:var(--pje-suave);text-align:center;margin-top:20px;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="PJE_app">
+
+<header id="PJE_header">
+  <div class="PJE_marcas">
+    <span>Coordinación de Seguridad · Gobierno de Jalisco</span>
+    <span>INEGI</span>
+  </div>
+  <h1>Censo Nacional de Procuración de Justicia Estatal</h1>
+  <div class="PJE_sub">Jalisco frente al agregado nacional · CNPJE 2021–2025</div>
+  <div id="PJE_estado">Conectando con la base de datos…</div>
+  <nav id="PJE_tabs" role="tablist"></nav>
+</header>
+
+<div id="PJE_barra">
+  <label for="PJE_ed">Edición</label>
+  <select id="PJE_ed"></select>
+  <button class="PJE_btn" id="PJE_recargar">Recargar datos</button>
+  <button class="PJE_btn" id="PJE_png">Descargar gráfica activa</button>
+</div>
+
+<main id="PJE_main"></main>
+
+<footer>
+  Fuente: INEGI. Censo Nacional de Procuración de Justicia Estatal y Federal, ediciones 2021 a 2025.<br>
+  Reporte de resultados 37/25 (versión definitiva del 30-ene-2026) y presentación de resultados 2024
+  (actualización del 23-may-2025).<br>
+  Elaboró: CGES/DGAPP/AA
+</footer>
+</div>
+
+<script>
+/* =======================================================================
+   PJE_ — Dashboard CNPJE. Todo el espacio de nombres va prefijado.
+   ======================================================================= */
+const PJE_HOJA = "1QEid3qqRJYOTRHi0U8HsEMqJz6R0zCC8mfpZKnZ2FG4";
+const PJE_GID  = "201584980";
+
+/* Ediciones: indice de columna Nacional en la fila gviz. Jalisco = +1.
+   La edicion N del censo publica datos del anio N-1. */
+const PJE_EDS = [
+  {ed:2021, dato:2020, c:1}, {ed:2022, dato:2021, c:3}, {ed:2023, dato:2022, c:5},
+  {ed:2024, dato:2023, c:7}, {ed:2025, dato:2024, c:9}
+];
+const PJE_PAL = ["#18345D","#203A80","#014574","#5B8BBC","#C9D5E6","#C8860A"];
+
+/* ---------- salvavidas: copia local, se usa si Google Sheets no responde ---------- */
+const PJE_RESPALDO = `
+PERSONAL|Total|116322||115305||111247||109731||100305|
+PERSONAL|Personal adscrito a la FGR|20720||19919||19479||19880||20214|
+PERSONAL|Personal adscrito a la FGE|95602|4398|95386|4313|91768|4483|89851|4598|80091|4808
+PRESUPUESTO|Presupuesto ejercido TOTAL (FGR + FGE), pesos corrientes|61477||66216||67194||74363.2||76891.8|
+PRESUPUESTO|Presupuesto ejercido por la FGR, pesos corrientes|15462||16652||17024||18943||19810.7|
+AGENCIAS|Total|3905||3796||3725||4796|489|4580|363
+AGENCIAS|Fiscalías del Ministerio Público de la FGR|191||190||101||126||165|
+AGENCIAS|Agencias y/o fiscalías del Ministerio Público de las FGE, por tipo*|3714|489|3606|477|3624|463|4670|489|4415|363
+AGENCIAS|Especializada en violencia intrafamiliar/ Especializada en violencia familiar|195|22|185|27|174|34|281|34|188|12
+AGENCIAS|Especializada en delitos contra las mujeres|173|20|185|25|22|30|207|30|193|10
+AGENCIAS|Especializada en robos|169|42|150|49|139|39|161|39|132|36
+AGENCIAS|Especializada en Homicidios|154|15|125|14|125|14|153|14|134|11
+AGENCIAS|Especializada en Feminicidios|95||113|6|100|11|138|11|103|
+AGENCIAS|Especializada en Personas desaparecidas, no localizadas, ausentes o extraviadas|108|37||19|80|23|84|23|114|23
+AGENCIAS|Especializada contra el robo de vehículos|||||87|15|101|15|85|14
+CARGOS|Policías ministeriales o investigadores o judiciales|14469|1284|16090|1284|20814|1452|16840|1511|21998|1502
+CARGOS|Personal administrativo y de apoyo|10444|568|9544|587|15305|537|10577|669|19211|729
+CARGOS|Agentes del Ministerio Público|10417|573|10133|599|14098|662||798||701
+CARGOS|Secretarios del Ministerio Público|7225|572|7471|571|8512|571||571||
+CARGOS|Peritos|3710|24|4576|15|6119|22|4800|21|8121|19
+CARGOS|Fiscales del Ministerio Público|2817|5|2845|9|2734|115||115||63
+CARGOS|Actuarios del Ministerio Público|924|737|826|723|984|748||3||792
+CARGOS|Otro cargo y/o Función desempeñada|1583|505|1940|358|2838|265|325|122|611|187
+CARGOS|Módulos de los Centros de Denuncia y Atención Ciudadana FGE|||300|16|362|12|390|12||
+DELITOS|FGR + FGE|1935405|126991|2130732|134176|2234118|134407|2271891|137088|2202255|140920
+DELITOS|FGR|78482||77637|4653|77693|4492|80145|4522|78611|4399
+DELITOS|FGE|1856923|126991|2053095|129523|2156425|129915|2191746|132566|2123644|136521
+DELITOS|Total|1856923|126991|2053095|129523|2156425|129915|2191746|132566|2123644|136521
+DELITOS|Robo*|612114||614737|52623|612071|46992|587107|42430|541748|36989
+DELITOS|Violencia Familiar|220609||254030|12669|270502|13798|285780|16905|278551|13648
+DELITOS|Lesiones|184860||202746|10724|220626|11390|228942|12823|230729|18280
+DELITOS|Daño a la propiedad|115915||136904|7629|148230|7033|150516|2911|145653|2299
+DELITOS|Amenazas|105464||120864|10314|137215|10174|141966|10071|146711|15399
+DELITOS|Narcomenudeo|91837||104587|1170|108305|1351|103743|1735|110602|3608
+DELITOS|Fraude|74001||94643|8066|104569|8833|115285|10378|114244|12003
+DELITOS|Homicidio|45805||46728|2781|45689|2703|45336|2539|46232|2290
+DELITOS|Despojo|28829||32886|1703||1484||1585|28635|1361
+DELITOS|Abuso de confianza|24592||30476|1435|31296|1510|31156|1746|30539|1333
+VICTIMAS|Total|2001738|133627|2196015|135799|2258695|140674|2363925|142454|2247102|134137
+VICTIMAS|Personas Físicas|1472160|121598|1911200|131685|1998060|136934|2097900|67398|1991977|127645
+VICTIMAS|Personas Morales|130428|4026|81594|934|106639|3623|113678|339|106191|2586
+VICTIMAS|Otro tipo de víctima|142919|2240|162509|3174|138507|86|135430|1860|138023|3901
+VICTIMAS|No identificada|256231|5763|40699|6|12847|31|16917|126|10911|5
+HOMICIDIO|Total|||50991|3486|50677|3288|51562|2601|51243|2510
+HOMICIDIO|Homicidio doloso|||32479|2380|30631|2073|30264|1493|30610|1552
+HOMICIDIO|Homicidio culposo|||17548|1029|19080|1178|19723|1046|19095|904
+HOMICIDIO|Feminicidio|||964|77|966|37|1575|62|1538|34
+ORDENES|Pendientes al inicio del año|||269766|50194|335246|39575|338308|47833|196449|21765
+ORDENES|Giradas|||90734|3536|124499|4917|119789|6905|120075|8358
+ORDENES|Concluidas|||86314|7809|119356|5451|127648|4464|101344|7936
+ORDENES|Pendientes al cierre del año|||272255|47254|333972|37241|303284|28325|205836|18490
+MASC|Oficinas|620|20|723|20|700|20|713|20|709|
+MASC|Personal de los órganos MASC|2792|130|2881|118|2762|146|2658|130|2613|123
+`.trim();
+
+/* Mapa de encabezado de seccion -> clave corta */
+const PJE_SECMAP = [
+  [/^Personal adscrito a las Procuradur/i,"PERSONAL"],
+  [/^Presupuesto ejercido por las Procuradur/i,"PRESUPUESTO"],
+  [/^Agencias y\/o fiscal[ií]as del Ministerio P[uú]blico de las\s+Procuradur/i,"AGENCIAS"],
+  [/^Personal que ejerc[ií]a sus funciones/i,"CARGOS"],
+  [/^Delitos registrados en las averiguaciones/i,"DELITOS"],
+  [/^V[ií]ctimas registradas en las averiguaciones/i,"VICTIMAS"],
+  [/^V[ií]ctimas de homicidio y feminicidio/i,"HOMICIDIO"],
+  [/^[ÓO]rdenes de aprehensi[oó]n/i,"ORDENES"],
+  [/^Mecanismos alternativos/i,"MASC"]
+];
+const PJE_ALIAS = {
+  "Delitos contra la salud relacionados con narcóticos en su modalidad de narcomenudeo":"Narcomenudeo",
+  "Órdenes de aprehensión u órdenes judiciales pendientes de cumplimentarse al inicio del año":"Pendientes al inicio del año",
+  "Órdenes de aprehensión u órdenes judiciales giradas":"Giradas",
+  "Órdenes de aprehensión u órdenes judiciales concluidas":"Concluidas",
+  "Órdenes de aprehensión u órdenes judiciales pendientes de cumplimentarse al cierre del año":"Pendientes al cierre del año",
+  "Personal de los órganos o unidades administrativas encargadas de los mecanismos alternativos de solución de controversias":"Personal de los órganos MASC"
+};
+
+let PJE_D = {};            // {SECCION: {etiqueta: [n2020,j2020,n2021,j2021,...]}}
+let PJE_origen = "";
+let PJE_charts = {};
+let PJE_tabActiva = "panorama";
+let PJE_edIdx = 4;
+
+/* ---------------- utilidades ---------------- */
+const PJE_num = v => (v===null||v===undefined||v==="")?null:(typeof v==="number"?v:parseFloat(String(v).replace(/,/g,"")));
+const PJE_fmt = v => v===null||v===undefined||isNaN(v) ? "s/d"
+  : (Math.abs(v)<1000 && !Number.isInteger(v) ? v.toFixed(1)
+  : v.toLocaleString("es-MX",{maximumFractionDigits:1}));
+function PJE_get(sec,lab,i,jal){
+  const f = PJE_D[sec] && PJE_D[sec][lab];
+  if(!f) return null;
+  return f[PJE_EDS[i].c - 1 + (jal?1:0)] ?? null;
+}
+/* serie completa de un indicador: [{x,n,j}] */
+function PJE_serie(sec,lab){
+  return PJE_EDS.map((e,i)=>({x:String(e.dato), n:PJE_get(sec,lab,i,false), j:PJE_get(sec,lab,i,true)}));
+}
+function PJE_var(a,b){ return (a===null||b===null||!a) ? null : (b-a)/a*100; }
+function PJE_vhtml(v,bueno){
+  if(v===null) return '<div class="PJE_var PJE_flat">sin comparativo</div>';
+  const f = v>0.05?"▲":(v<-0.05?"▼":"■");
+  const cl = v>0.05?"PJE_up":(v<-0.05?"PJE_down":"PJE_flat");
+  return `<div class="PJE_var ${cl}">${f} ${Math.abs(v).toFixed(1)} % vs año previo</div>`;
+}
+
+/* ---------------- carga de datos ---------------- */
+function PJE_parseRespaldo(){
+  const d={};
+  PJE_RESPALDO.split("\n").forEach(l=>{
+    const p=l.split("|"); if(p.length<3) return;
+    const sec=p[0].trim(), lab=p[1].trim();
+    d[sec]=d[sec]||{};
+    d[sec][lab]=p.slice(2).map(x=>x.trim()===""?null:parseFloat(x));
+  });
+  return d;
+}
+window.PJE_gviz = function(resp){
+  try{
+    if(!resp || !resp.table || !resp.table.rows) throw new Error("respuesta vacía");
+    const d={}; let sec=null;
+    resp.table.rows.forEach(r=>{
+      const c=r.c||[];
+      const lab = c[0] && c[0].v!=null ? String(c[0].v).replace(/\s+/g," ").trim() : "";
+      if(!lab) return;
+      const vals = [];
+      for(let k=1;k<=10;k++) vals.push(c[k] && c[k].v!=null ? PJE_num(c[k].v) : null);
+      const esEncabezado = vals.every(v=>v===null);
+      if(esEncabezado){
+        const m = PJE_SECMAP.find(([re])=>re.test(lab));
+        if(m) sec = m[1];
+        return;
+      }
+      if(!sec) return;
+      // la fila de años (2021,2022,...) no es un indicador
+      if(vals[0]>=2019 && vals[0]<=2030 && vals[2]>=2019) return;
+      d[sec]=d[sec]||{};
+      d[sec][PJE_ALIAS[lab] || lab] = vals;
+    });
+    if(Object.keys(d).length < 6) throw new Error("estructura incompleta");
+    PJE_D = d; PJE_origen = "Google Sheets";
+  }catch(e){
+    PJE_D = PJE_parseRespaldo(); PJE_origen = "copia local (salvavidas)";
+  }
+  PJE_render();
+};
+function PJE_cargar(){
+  document.getElementById("PJE_estado").innerHTML = "Conectando con la base de datos…";
+  const s=document.createElement("script");
+  s.src = `https://docs.google.com/spreadsheets/d/${PJE_HOJA}/gviz/tq`
+        + `?tqx=out:json;responseHandler:PJE_gviz&gid=${PJE_GID}&t=${Date.now()}`;
+  s.onerror = ()=>{ PJE_D=PJE_parseRespaldo(); PJE_origen="copia local (salvavidas)"; PJE_render(); };
+  document.body.appendChild(s);
+  setTimeout(()=>{ if(!Object.keys(PJE_D).length){ PJE_D=PJE_parseRespaldo();
+    PJE_origen="copia local (salvavidas)"; PJE_render(); } }, 9000);
+}
+
+/* ---------------- gráficas ---------------- */
+const PJE_BASE = {
+  grid:{left:8,right:14,top:38,bottom:8,containLabel:true},
+  tooltip:{trigger:"axis",backgroundColor:"#fff",borderColor:"#C9D5E6",borderWidth:1,
+    textStyle:{color:"#333",fontSize:11,fontFamily:"Arial"},
+    valueFormatter:v=>v==null?"s/d":Number(v).toLocaleString("es-MX")},
+  textStyle:{fontFamily:"Arial"}
+};
+function PJE_ejeY(nombre){
+  return {type:"value",name:nombre,nameTextStyle:{color:"#5B6B80",fontSize:10,align:"left"},
+    axisLabel:{color:"#5B6B80",fontSize:10,formatter:v=>Math.abs(v)>=1000?(v/1000).toLocaleString("es-MX")+"k":v},
+    splitLine:{lineStyle:{color:"#EEF2F8"}},axisLine:{show:false},axisTick:{show:false}};
+}
+function PJE_ejeX(cats){
+  return {type:"category",data:cats,axisLabel:{color:"#5B6B80",fontSize:10.5,interval:0,
+    hideOverlap:true},axisLine:{lineStyle:{color:"#C9D5E6"}},axisTick:{show:false}};
+}
+/* etiquetas de datos siempre visibles: requisito permanente del proyecto */
+function PJE_label(pos){
+  return {show:true,position:pos||"top",fontSize:9.5,fontFamily:"Poppins,Arial",color:"#18345D",
+    formatter:p=>p.value==null?"":Number(p.value).toLocaleString("es-MX",{maximumFractionDigits:1})};
+}
+function PJE_pinta(id,opt){
+  const el=document.getElementById(id); if(!el) return;
+  if(PJE_charts[id]) PJE_charts[id].dispose();
+  const ch=echarts.init(el,null,{renderer:"canvas"});
+  ch.setOption(Object.assign({},PJE_BASE,opt));
+  PJE_charts[id]=ch;
+}
+function PJE_lineaDual(id,sec,lab,nomN,nomJ){
+  const s=PJE_serie(sec,lab);
+  PJE_pinta(id,{
+    legend:{top:2,textStyle:{fontSize:10.5,color:"#5B6B80"},itemWidth:14,itemHeight:8},
+    xAxis:PJE_ejeX(s.map(r=>r.x)),
+    yAxis:[PJE_ejeY(nomN),Object.assign(PJE_ejeY(nomJ),{splitLine:{show:false}})],
+    series:[
+      {name:nomN,type:"bar",data:s.map(r=>r.n),itemStyle:{color:"#C9D5E6",borderRadius:[3,3,0,0]},
+       label:Object.assign(PJE_label("insideTop"),{color:"#18345D",fontSize:9}),barMaxWidth:44},
+      {name:nomJ,type:"line",yAxisIndex:1,data:s.map(r=>r.j),smooth:false,symbolSize:7,
+       lineStyle:{width:2.5,color:"#18345D"},itemStyle:{color:"#18345D"},label:PJE_label()}
+    ]});
+}
+function PJE_barras(id,cats,series,horiz){
+  const ser=series.map((s,i)=>({name:s.n,type:"bar",data:s.d,
+    itemStyle:{color:s.c||PJE_PAL[i%6],borderRadius:horiz?[0,3,3,0]:[3,3,0,0]},
+    label:PJE_label(horiz?"right":"top"),barMaxWidth:horiz?18:40}));
+  PJE_pinta(id,{
+    legend:series.length>1?{top:2,textStyle:{fontSize:10.5,color:"#5B6B80"},itemWidth:14,itemHeight:8}:{show:false},
+    grid:{left:8,right:horiz?58:14,top:series.length>1?38:16,bottom:8,containLabel:true},
+    xAxis: horiz?PJE_ejeY(""):PJE_ejeX(cats),
+    yAxis: horiz?Object.assign(PJE_ejeX(cats),{inverse:true}):PJE_ejeY(""),
+    series:ser});
+}
+
+/* ---------------- secciones ---------------- */
+function PJE_kpi(cif,lab,varPct,bueno){
+  return `<div class="PJE_kpi ${bueno?"PJE_good":""}"><div class="PJE_cif">${cif}</div>
+    <div class="PJE_lab">${lab}</div>${PJE_vhtml(varPct)}</div>`;
+}
+function PJE_secPanorama(){
+  const i=PJE_edIdx, p=i>0?i-1:0;
+  const g=(s,l,j)=>PJE_get(s,l,i,j), gp=(s,l,j)=>PJE_get(s,l,p,j);
+  const dJ=g("DELITOS","Total",true), dN=g("DELITOS","Total",false);
+  const pers=g("PERSONAL","Personal adscrito a la FGE",true);
+  const pres=g("PRESUPUESTO","Presupuesto ejercido TOTAL (FGR + FGE), pesos corrientes",false);
+  const hom=g("HOMICIDIO","Total",true);
+  const conc=g("ORDENES","Concluidas",true), gir=g("ORDENES","Giradas",true);
+  return `
+  <div class="PJE_kpis">
+    ${PJE_kpi(PJE_fmt(dJ),"Delitos registrados por la FGE Jalisco",PJE_var(gp("DELITOS","Total",true),dJ))}
+    ${PJE_kpi(dJ&&dN?((dJ/dN)*100).toFixed(2)+" %":"s/d","Participación de Jalisco en el total nacional",null)}
+    ${PJE_kpi(PJE_fmt(pers),"Personal adscrito a la FGE Jalisco",PJE_var(gp("PERSONAL","Personal adscrito a la FGE",true),pers),true)}
+    ${PJE_kpi(PJE_fmt(hom),"Víctimas de homicidio y feminicidio, Jalisco",PJE_var(gp("HOMICIDIO","Total",true),hom))}
+    ${PJE_kpi(conc&&gir?((conc/gir)*100).toFixed(1)+" %":"s/d","Órdenes concluidas sobre giradas, Jalisco",null,true)}
+  </div>
+  <div class="PJE_hallazgo"><b>Brecha entre carga y recurso.</b> Jalisco concentra
+    ${dJ&&dN?((dJ/dN)*100).toFixed(2):"—"} % de los delitos que registran las fiscalías estatales del país
+    con ${PJE_fmt(pers)} personas adscritas. Contrastar esta participación con la del presupuesto es la
+    lectura central del tablero.</div>
+  <div class="PJE_panel">
+    <h3>Delitos registrados por la FGE: Jalisco dentro del total nacional</h3>
+    <p class="PJE_nota">Barras claras, total nacional de las fiscalías estatales, eje izquierdo.
+      Línea azul, Jalisco, eje derecho. El año es el de referencia del dato, no el de la edición del censo.</p>
+    <div class="PJE_lienzo" id="PJE_g1"></div>
+    <div class="PJE_fuente">Fuente: INEGI. CNPJE, ediciones 2021 a 2025.</div>
+  </div>
+  <div class="PJE_duo">
+    <div class="PJE_panel"><h3>Personal adscrito a la FGE</h3>
+      <p class="PJE_nota">El descenso nacional de 2024 no es real: Ciudad de México no entregó el módulo
+        de estructura organizacional.</p>
+      <div class="PJE_lienzo" id="PJE_g2"></div>
+      <div class="PJE_fuente">Fuente: INEGI. CNPJE, ediciones 2021 a 2025.</div></div>
+    <div class="PJE_panel"><h3>Presupuesto ejercido, pesos corrientes</h3>
+      <p class="PJE_nota">Millones de pesos. Total federal más estatal frente a la Fiscalía General
+        de la República.</p>
+      <div class="PJE_lienzo" id="PJE_g3"></div>
+      <div class="PJE_fuente">Fuente: INEGI. CNPJE, ediciones 2021 a 2025.</div></div>
+  </div>`;
+}
+function PJE_pintaPanorama(){
+  PJE_lineaDual("PJE_g1","DELITOS","Total","Nacional FGE","Jalisco");
+  PJE_lineaDual("PJE_g2","PERSONAL","Personal adscrito a la FGE","Nacional","Jalisco");
+  const t=PJE_serie("PRESUPUESTO","Presupuesto ejercido TOTAL (FGR + FGE), pesos corrientes");
+  const f=PJE_serie("PRESUPUESTO","Presupuesto ejercido por la FGR, pesos corrientes");
+  PJE_barras("PJE_g3",t.map(r=>r.x),[
+    {n:"Total FGR + FGE",d:t.map(r=>r.n),c:"#18345D"},
+    {n:"FGR",d:f.map(r=>r.n),c:"#C8860A"}]);
+}
+
+function PJE_secDelitos(){
+  return `
+  <div class="PJE_panel">
+    <h3>Principales delitos registrados en Jalisco</h3>
+    <p class="PJE_nota">Delitos de la Fiscalía General del Estado en el año seleccionado.</p>
+    <div class="PJE_lienzo" id="PJE_g4" style="height:380px"></div>
+    <div class="PJE_fuente">Fuente: INEGI. CNPJE. Para 2024, tabulados de datos abiertos.</div>
+  </div>
+  <div class="PJE_panel">
+    <h3>Cómo se movió cada delito en Jalisco</h3>
+    <p class="PJE_nota">Variación contra el año previo. Rojo, aumento; verde, reducción.</p>
+    <div class="PJE_lienzo" id="PJE_g5" style="height:360px"></div>
+    <div class="PJE_fuente">Fuente: INEGI. CNPJE, ediciones 2021 a 2025.</div>
+  </div>
+  <div class="PJE_duo">
+    <div class="PJE_panel"><h3>Robo</h3><div class="PJE_lienzo" id="PJE_g6"></div>
+      <div class="PJE_fuente">Fuente: INEGI. CNPJE.</div></div>
+    <div class="PJE_panel"><h3>Violencia familiar</h3><div class="PJE_lienzo" id="PJE_g7"></div>
+      <div class="PJE_fuente">Fuente: INEGI. CNPJE.</div></div>
+  </div>`;
+}
+const PJE_DEL = ["Robo*","Violencia Familiar","Lesiones","Daño a la propiedad","Amenazas",
+  "Narcomenudeo","Fraude","Homicidio","Despojo","Abuso de confianza"];
+function PJE_pintaDelitos(){
+  const i=PJE_edIdx;
+  const filas = PJE_DEL.map(l=>({l,v:PJE_get("DELITOS",l,i,true)}))
+                       .filter(r=>r.v!=null).sort((a,b)=>b.v-a.v);
+  PJE_barras("PJE_g4",filas.map(r=>r.l),[{n:"Jalisco",d:filas.map(r=>r.v),c:"#18345D"}],true);
+  const p=i>0?i-1:0;
+  const vs = PJE_DEL.map(l=>({l,v:PJE_var(PJE_get("DELITOS",l,p,true),PJE_get("DELITOS",l,i,true))}))
+                    .filter(r=>r.v!=null).sort((a,b)=>b.v-a.v);
+  PJE_pinta("PJE_g5",{
+    grid:{left:8,right:60,top:16,bottom:8,containLabel:true},
+    xAxis:PJE_ejeY("%"), yAxis:Object.assign(PJE_ejeX(vs.map(r=>r.l)),{inverse:true}),
+    series:[{type:"bar",data:vs.map(r=>({value:r.v,itemStyle:{color:r.v>0?"#B3261E":"#2E7D32",
+      borderRadius:[0,3,3,0]}})),barMaxWidth:18,
+      label:{show:true,position:"right",fontSize:9.5,fontFamily:"Poppins,Arial",color:"#333",
+        formatter:p=>(p.value>0?"▲ ":"▼ ")+Math.abs(p.value).toFixed(1)+" %"}}]});
+  PJE_lineaDual("PJE_g6","DELITOS","Robo*","Nacional","Jalisco");
+  PJE_lineaDual("PJE_g7","DELITOS","Violencia Familiar","Nacional","Jalisco");
+}
+
+function PJE_secVictimas(){
+  return `
+  <div class="PJE_panel"><h3>Víctimas registradas por las fiscalías estatales</h3>
+    <p class="PJE_nota">Total de víctimas. La Fiscalía General de la República no reporta este tema.</p>
+    <div class="PJE_lienzo" id="PJE_g8"></div>
+    <div class="PJE_fuente">Fuente: INEGI. CNPJE, ediciones 2021 a 2025.</div></div>
+  <div class="PJE_panel"><h3>Víctimas de homicidio y feminicidio en Jalisco</h3>
+    <p class="PJE_nota">El feminicidio se presenta como consumado en toda la serie, para que sea comparable.</p>
+    <div class="PJE_lienzo" id="PJE_g9"></div>
+    <div class="PJE_fuente">Fuente: INEGI. CNPJE, ediciones 2022 a 2025.</div></div>
+  <div class="PJE_panel"><h3>Composición de las víctimas en Jalisco</h3>
+    <div class="PJE_lienzo" id="PJE_g10"></div>
+    <div class="PJE_fuente">Fuente: INEGI. CNPJE. Para 2024, tabulados de datos abiertos.</div></div>`;
+}
+function PJE_pintaVictimas(){
+  PJE_lineaDual("PJE_g8","VICTIMAS","Total","Nacional","Jalisco");
+  const d=PJE_serie("HOMICIDIO","Homicidio doloso"), c=PJE_serie("HOMICIDIO","Homicidio culposo"),
+        f=PJE_serie("HOMICIDIO","Feminicidio");
+  PJE_barras("PJE_g9",d.map(r=>r.x),[
+    {n:"Homicidio doloso",d:d.map(r=>r.j),c:"#18345D"},
+    {n:"Homicidio culposo",d:c.map(r=>r.j),c:"#5B8BBC"},
+    {n:"Feminicidio consumado",d:f.map(r=>r.j),c:"#F08013"}]);
+  const cats=["Personas Físicas","Personas Morales","Otro tipo de víctima","No identificada"];
+  const s=PJE_serie("VICTIMAS","Total");
+  PJE_barras("PJE_g10",s.map(r=>r.x),cats.map((c2,k)=>({n:c2,
+    d:PJE_serie("VICTIMAS",c2).map(r=>r.j),c:PJE_PAL[k]})));
+}
+
+function PJE_secJusticia(){
+  return `
+  <div class="PJE_panel"><h3>Órdenes judiciales en Jalisco</h3>
+    <p class="PJE_nota">Saldo al inicio, movimiento del año y saldo al cierre.</p>
+    <div class="PJE_lienzo" id="PJE_g11"></div>
+    <div class="PJE_fuente">Fuente: INEGI. CNPJE, ediciones 2022 a 2025.</div></div>
+  <div class="PJE_duo">
+    <div class="PJE_panel"><h3>Agencias y fiscalías del Ministerio Público</h3>
+      <div class="PJE_lienzo" id="PJE_g12"></div>
+      <div class="PJE_fuente">Fuente: INEGI. CNPJE.</div></div>
+    <div class="PJE_panel"><h3>Personal de los órganos de mecanismos alternativos</h3>
+      <div class="PJE_lienzo" id="PJE_g13"></div>
+      <div class="PJE_fuente">Fuente: INEGI. CNPJE.</div></div>
+  </div>
+  <div class="PJE_panel"><h3>Fiscalías especializadas en Jalisco</h3>
+    <p class="PJE_nota">Ruptura de serie: en la edición 2025 las categorías excluyen traslapes,
+      por lo que la caída frente a 2023 no es comparable.</p>
+    <div class="PJE_lienzo" id="PJE_g14" style="height:340px"></div>
+    <div class="PJE_fuente">Fuente: INEGI. CNPJE.</div></div>`;
+}
+const PJE_ESP=["Especializada en violencia intrafamiliar/ Especializada en violencia familiar",
+  "Especializada en delitos contra las mujeres","Especializada en robos","Especializada en Homicidios",
+  "Especializada en Feminicidios","Especializada en Personas desaparecidas, no localizadas, ausentes o extraviadas",
+  "Especializada contra el robo de vehículos"];
+const PJE_ESPC=["Violencia familiar","Delitos contra las mujeres","Robos","Homicidios","Feminicidios",
+  "Personas desaparecidas","Robo de vehículos"];
+function PJE_pintaJusticia(){
+  const ini=PJE_serie("ORDENES","Pendientes al inicio del año"),
+        gir=PJE_serie("ORDENES","Giradas"), con=PJE_serie("ORDENES","Concluidas"),
+        cie=PJE_serie("ORDENES","Pendientes al cierre del año");
+  PJE_barras("PJE_g11",ini.map(r=>r.x),[
+    {n:"Pendientes al inicio",d:ini.map(r=>r.j),c:"#C9D5E6"},
+    {n:"Giradas",d:gir.map(r=>r.j),c:"#203A80"},
+    {n:"Concluidas",d:con.map(r=>r.j),c:"#2E7D32"},
+    {n:"Pendientes al cierre",d:cie.map(r=>r.j),c:"#18345D"}]);
+  PJE_lineaDual("PJE_g12","AGENCIAS","Agencias y/o fiscalías del Ministerio Público de las FGE, por tipo*","Nacional","Jalisco");
+  PJE_lineaDual("PJE_g13","MASC","Personal de los órganos MASC","Nacional","Jalisco");
+  const i=PJE_edIdx;
+  const vals=PJE_ESP.map(l=>PJE_get("AGENCIAS",l,i,true));
+  PJE_barras("PJE_g14",PJE_ESPC,[{n:"Jalisco",d:vals,c:"#18345D"}],true);
+}
+
+function PJE_secTabla(){
+  const i=PJE_edIdx, p=i>0?i-1:0;
+  const bloques=[["PERSONAL","Personal y recursos"],["PRESUPUESTO","Presupuesto (millones de pesos)"],
+    ["AGENCIAS","Agencias y fiscalías"],["CARGOS","Personal por cargo"],["DELITOS","Delitos registrados"],
+    ["VICTIMAS","Víctimas"],["HOMICIDIO","Víctimas de homicidio y feminicidio"],
+    ["ORDENES","Órdenes judiciales"],["MASC","Mecanismos alternativos"]];
+  let h=`<div class="PJE_panel"><h3>Tabla completa · ${PJE_EDS[i].dato} (CNPJE ${PJE_EDS[i].ed})</h3>
+    <p class="PJE_nota">Variación calculada contra ${PJE_EDS[p].dato}. "s/d" significa que la fuente
+      no publica el dato con ese desglose.</p><div class="PJE_tablaWrap"><table class="PJE_t">
+    <thead><tr><th>Indicador</th><th>Nacional</th><th>Jalisco</th><th>Jal./Nac.</th>
+    <th>Jalisco, var. %</th></tr></thead><tbody>`;
+  bloques.forEach(([s,t])=>{
+    if(!PJE_D[s]) return;
+    h+=`<tr class="PJE_grupo"><td colspan="5">${t}</td></tr>`;
+    Object.keys(PJE_D[s]).forEach(l=>{
+      const n=PJE_get(s,l,i,false), j=PJE_get(s,l,i,true), jp=PJE_get(s,l,p,true);
+      const v=PJE_var(jp,j);
+      const cl=v===null?"":(v>0.05?"PJE_up":(v<-0.05?"PJE_down":""));
+      h+=`<tr><td>${l}</td><td>${PJE_fmt(n)}</td><td>${PJE_fmt(j)}</td>
+        <td>${(n&&j)?((j/n)*100).toFixed(2)+" %":"s/d"}</td>
+        <td class="${cl}">${v===null?"s/d":(v>0?"▲ ":"▼ ")+Math.abs(v).toFixed(1)+" %"}</td></tr>`;
+    });
+  });
+  return h+`</tbody></table></div><div class="PJE_fuente">Fuente: INEGI. CNPJE, ediciones 2021 a 2025.
+    Los totales nacionales de estructura y presupuesto de 2024 excluyen a Ciudad de México.</div></div>`;
+}
+
+const PJE_SECS=[
+  {id:"panorama", t:"Panorama",  html:PJE_secPanorama, draw:PJE_pintaPanorama},
+  {id:"delitos",  t:"Delitos",   html:PJE_secDelitos,  draw:PJE_pintaDelitos},
+  {id:"victimas", t:"Víctimas",  html:PJE_secVictimas, draw:PJE_pintaVictimas},
+  {id:"justicia", t:"Procuración", html:PJE_secJusticia, draw:PJE_pintaJusticia},
+  {id:"tabla",    t:"Tabla completa", html:PJE_secTabla, draw:()=>{}}
+];
+
+/* ---------------- render ---------------- */
+function PJE_render(){
+  const ed=document.getElementById("PJE_ed");
+  if(!ed.options.length){
+    PJE_EDS.forEach((e,i)=>ed.add(new Option(`${e.dato} (CNPJE ${e.ed})`,i)));
+    ed.value=PJE_edIdx;
+  }
+  document.getElementById("PJE_estado").innerHTML =
+    `Datos de <b>${PJE_origen}</b> · corte ${PJE_EDS[PJE_edIdx].dato} · actualizado ${new Date().toLocaleString("es-MX")}`;
+  const tabs=document.getElementById("PJE_tabs");
+  if(!tabs.children.length){
+    PJE_SECS.forEach(s=>{
+      const b=document.createElement("button");
+      b.textContent=s.t; b.setAttribute("role","tab"); b.dataset.id=s.id;
+      b.setAttribute("aria-selected", s.id===PJE_tabActiva);
+      b.onclick=()=>{ PJE_tabActiva=s.id;
+        [...tabs.children].forEach(x=>x.setAttribute("aria-selected", x.dataset.id===s.id));
+        PJE_render(); window.scrollTo({top:0,behavior:"smooth"}); };
+      tabs.appendChild(b);
+    });
+  }
+  const s=PJE_SECS.find(x=>x.id===PJE_tabActiva);
+  document.getElementById("PJE_main").innerHTML=`<section class="PJE_seccion PJE_on">${s.html()}</section>`;
+  Object.values(PJE_charts).forEach(c=>c.dispose()); PJE_charts={};
+  requestAnimationFrame(()=>s.draw());
+}
+document.getElementById("PJE_ed").onchange=e=>{ PJE_edIdx=+e.target.value; PJE_render(); };
+document.getElementById("PJE_recargar").onclick=()=>{ PJE_D={}; PJE_cargar(); };
+document.getElementById("PJE_png").onclick=()=>{
+  const k=Object.keys(PJE_charts)[0]; if(!k) return;
+  const a=document.createElement("a");
+  a.href=PJE_charts[k].getDataURL({pixelRatio:2,backgroundColor:"#fff"});
+  a.download=`PJE_${PJE_tabActiva}_${PJE_EDS[PJE_edIdx].dato}.png`; a.click();
+};
+window.addEventListener("resize",()=>Object.values(PJE_charts).forEach(c=>c.resize()));
+PJE_cargar();
+</script>
+</body>
+</html>
