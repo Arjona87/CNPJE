@@ -73,8 +73,11 @@ body{font-family:Arial,Helvetica,sans-serif;color:var(--pje-texto);background:va
 .PJE_hallazgo{border-left:3px solid var(--pje-naranja);background:var(--pje-sup);
   padding:8px 10px;margin:8px 0;font-size:11.5px;line-height:1.45;border-radius:0 6px 6px 0}
 .PJE_hallazgo b{color:var(--pje-azul)}
-.PJE_seccion{display:none}
-.PJE_seccion.PJE_on{display:block}
+.PJE_seccion{display:block}
+.PJE_tituloSec{font-family:Poppins,Arial,sans-serif;font-size:15px;font-weight:800;
+  color:var(--pje-azul);margin:24px 0 2px;padding-top:8px;border-top:2px solid var(--pje-claro);
+  scroll-margin-top:100px}
+.PJE_seccion:first-child .PJE_tituloSec{margin-top:10px;padding-top:0;border-top:0}
 
 /* ---------- tabla ---------- */
 .PJE_tablaWrap{overflow-x:auto}
@@ -592,14 +595,17 @@ function PJE_render(){
       b.setAttribute("aria-selected", s.id===PJE_tabActiva);
       b.onclick=()=>{ PJE_tabActiva=s.id;
         [...tabs.children].forEach(x=>x.setAttribute("aria-selected", x.dataset.id===s.id));
-        PJE_render(); window.scrollTo({top:0,behavior:"smooth"}); };
+        const dest=document.getElementById("PJE_s_"+s.id);
+        if(dest) window.scrollTo({top:dest.offsetTop-96,behavior:"smooth"}); };
       tabs.appendChild(b);
     });
   }
-  const s=PJE_SECS.find(x=>x.id===PJE_tabActiva);
-  document.getElementById("PJE_main").innerHTML=`<section class="PJE_seccion PJE_on">${s.html()}</section>`;
+  /* pagina continua: todas las secciones se arman de una vez, el usuario solo baja */
+  document.getElementById("PJE_main").innerHTML = PJE_SECS.map(s=>
+    `<section id="PJE_s_${s.id}" class="PJE_seccion PJE_on">
+       <h2 class="PJE_tituloSec">${s.t}</h2>${s.html()}</section>`).join("");
   Object.values(PJE_charts).forEach(c=>c.dispose()); PJE_charts={};
-  requestAnimationFrame(()=>s.draw());
+  requestAnimationFrame(()=>PJE_SECS.forEach(s=>s.draw()));
 }
 document.getElementById("PJE_ed").onchange=e=>{ PJE_edIdx=+e.target.value; PJE_render(); };
 document.getElementById("PJE_recargar").onclick=()=>{ PJE_D={}; PJE_cargar(); };
