@@ -129,12 +129,31 @@ footer{font-size:10px;color:var(--pje-suave);text-align:center;margin-top:20px;l
 const PJE_HOJA = "1QEid3qqRJYOTRHi0U8HsEMqJz6R0zCC8mfpZKnZ2FG4";
 const PJE_GID  = "201584980";
 
-/* Ediciones: indice de columna Nacional en la fila gviz. Jalisco = +1.
-   La edicion N del censo publica datos del anio N-1. */
-const PJE_EDS = [
+/* Ediciones: se detectan solas desde la fila de anios de la hoja.
+   c = desplazamiento de la columna Nacional (B=1); Jalisco = c+1.
+   La edicion N del censo publica datos del anio N-1.
+   La lista de abajo es solo el arranque y el respaldo local. */
+let PJE_EDS = [
   {ed:2021, dato:2020, c:1}, {ed:2022, dato:2021, c:3}, {ed:2023, dato:2022, c:5},
   {ed:2024, dato:2023, c:7}, {ed:2025, dato:2024, c:9}
 ];
+function PJE_edsDeFila(vals){
+  const e=[];
+  for(let k=0;k<vals.length;k+=2){
+    const v=vals[k];
+    if(v!=null && v>=2019 && v<=2040) e.push({ed:v,dato:v-1,c:k+1});
+  }
+  return e.length>=3 ? e : null;
+}
+/* ultima edicion que trae algun dato, para no abrir en una columna vacia */
+function PJE_ultimaConDatos(){
+  for(let i=PJE_EDS.length-1;i>=0;i--){
+    const hay=Object.values(PJE_D).some(s=>Object.values(s).some(f=>
+      f[PJE_EDS[i].c-1]!=null || f[PJE_EDS[i].c]!=null));
+    if(hay) return i;
+  }
+  return PJE_EDS.length-1;
+}
 const PJE_PAL = ["#18345D","#203A80","#014574","#5B8BBC","#C9D5E6","#C8860A"];
 
 /* ---------- salvavidas: copia local, se usa si Google Sheets no responde ---------- */
