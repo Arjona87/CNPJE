@@ -118,7 +118,7 @@ footer{font-size:10px;color:var(--pje-suave);text-align:center;margin-top:20px;l
   Fuente: INEGI. Censo Nacional de Procuración de Justicia Estatal y Federal, ediciones 2021 a 2025.<br>
   Reporte de resultados 37/25 (versión definitiva del 30-ene-2026) y presentación de resultados 2024
   (actualización del 23-may-2025).<br>
-  Elaboró: CGES/DGAPP/AA
+  Elaboró: CGES/DGAPP/AA · <span id="PJE_ver"></span>
 </footer>
 </div>
 
@@ -126,6 +126,7 @@ footer{font-size:10px;color:var(--pje-suave);text-align:center;margin-top:20px;l
 /* =======================================================================
    PJE_ — Dashboard CNPJE. Todo el espacio de nombres va prefijado.
    ======================================================================= */
+const PJE_VERSION = "v2 · autodetección de ediciones · 2026-09-30";
 const PJE_HOJA = "1QEid3qqRJYOTRHi0U8HsEMqJz6R0zCC8mfpZKnZ2FG4";
 const PJE_GID  = "201584980";
 
@@ -277,29 +278,32 @@ window.PJE_gviz = function(resp){
   try{
     if(!resp || !resp.table || !resp.table.rows) throw new Error("respuesta vacía");
     const d={}; let sec=null;
+    const NCOL = resp.table.cols.length - 1;   // lee TODAS las columnas, no solo 10
+    let edsNuevas = null;
     resp.table.rows.forEach(r=>{
       const c=r.c||[];
       const lab = c[0] && c[0].v!=null ? String(c[0].v).replace(/\s+/g," ").trim() : "";
-      if(!lab) return;
       const vals = [];
-      for(let k=1;k<=10;k++) vals.push(c[k] && c[k].v!=null ? PJE_num(c[k].v) : null);
-      const esEncabezado = vals.every(v=>v===null);
-      if(esEncabezado){
+      for(let k=1;k<=NCOL;k++) vals.push(c[k] && c[k].v!=null ? PJE_num(c[k].v) : null);
+      // la fila de anios define que ediciones existen
+      if(!edsNuevas){ const e=PJE_edsDeFila(vals); if(e){ edsNuevas=e; return; } }
+      if(!lab) return;
+      if(vals.every(v=>v===null)){
         const m = PJE_SECMAP.find(([re])=>re.test(lab));
         if(m) sec = m[1];
         return;
       }
       if(!sec) return;
-      // la fila de años (2021,2022,...) no es un indicador
-      if(vals[0]>=2019 && vals[0]<=2030 && vals[2]>=2019) return;
       d[sec]=d[sec]||{};
       d[sec][PJE_ALIAS[lab] || lab] = vals;
     });
     if(Object.keys(d).length < 6) throw new Error("estructura incompleta");
+    if(edsNuevas) PJE_EDS = edsNuevas;
     PJE_D = d; PJE_origen = "Google Sheets";
   }catch(e){
     PJE_D = PJE_parseRespaldo(); PJE_origen = "copia local (salvavidas)";
   }
+  PJE_edIdx = PJE_ultimaConDatos();
   PJE_render();
 };
 function PJE_cargar(){
@@ -572,8 +576,10 @@ const PJE_SECS=[
 /* ---------------- render ---------------- */
 function PJE_render(){
   const ed=document.getElementById("PJE_ed");
-  if(!ed.options.length){
+  if(ed.options.length !== PJE_EDS.length){
+    ed.innerHTML="";
     PJE_EDS.forEach((e,i)=>ed.add(new Option(`${e.dato} (CNPJE ${e.ed})`,i)));
+    if(PJE_edIdx>=PJE_EDS.length) PJE_edIdx=PJE_EDS.length-1;
     ed.value=PJE_edIdx;
   }
   document.getElementById("PJE_estado").innerHTML =
@@ -604,6 +610,8 @@ document.getElementById("PJE_png").onclick=()=>{
   a.download=`PJE_${PJE_tabActiva}_${PJE_EDS[PJE_edIdx].dato}.png`; a.click();
 };
 window.addEventListener("resize",()=>Object.values(PJE_charts).forEach(c=>c.resize()));
+document.getElementById("PJE_ver").textContent = PJE_VERSION;
+console.log("CNPJE dashboard " + PJE_VERSION);
 PJE_cargar();
 </script>
 </body>
