@@ -129,7 +129,7 @@ footer{font-size:10px;color:var(--pje-suave);text-align:center;margin-top:20px;l
 /* =======================================================================
    PJE_ — Dashboard CNPJE. Todo el espacio de nombres va prefijado.
    ======================================================================= */
-const PJE_VERSION = "v2 · autodetección de ediciones · 2026-09-30";
+const PJE_VERSION = "v3 · página continua + rezago de carpetas · 2026-09-30";
 const PJE_HOJA = "1QEid3qqRJYOTRHi0U8HsEMqJz6R0zCC8mfpZKnZ2FG4";
 const PJE_GID  = "201584980";
 
@@ -227,7 +227,9 @@ const PJE_SECMAP = [
   [/^V[ií]ctimas registradas en las averiguaciones/i,"VICTIMAS"],
   [/^V[ií]ctimas de homicidio y feminicidio/i,"HOMICIDIO"],
   [/^[ÓO]rdenes de aprehensi[oó]n/i,"ORDENES"],
-  [/^Mecanismos alternativos/i,"MASC"]
+  [/^Mecanismos alternativos/i,"MASC"],
+  [/^Carpetas de investigaci[oó]n, seg[uú]n estatus/i,"CARPETAS"],
+  [/^Averiguaciones previas e investigaciones\s*$/i,"AVPREVIAS"]
 ];
 const PJE_ALIAS = {
   "Delitos contra la salud relacionados con narcóticos en su modalidad de narcomenudeo":"Narcomenudeo",
@@ -499,8 +501,35 @@ function PJE_pintaVictimas(){
     d:PJE_serie("VICTIMAS",c2).map(r=>r.j),c:PJE_PAL[k]})));
 }
 
+/* rezago comparable = carpetas pendientes + averiguaciones previas pendientes.
+   La edicion 2024 publica ambos universos juntos; la 2025 los separa. */
+function PJE_rezago(k){
+  const cp=PJE_serie("CARPETAS","Procedimientos pendientes de concluir");
+  const ap=PJE_serie("AVPREVIAS","Averiguaciones previas pendientes de concluir");
+  return cp.map((r,i)=>{
+    const a=r[k], b=ap[i]?ap[i][k]:null;
+    return (a==null&&b==null)?null:(a||0)+(b||0);
+  });
+}
 function PJE_secJusticia(){
+  const rj=PJE_rezago("j"), rn=PJE_rezago("n"), i=PJE_edIdx, p=i>0?i-1:0;
+  const part = (rj[i]&&rn[i]) ? (rj[i]/rn[i]*100).toFixed(1) : null;
+  const vr = (rj[p]&&rj[i]) ? ((rj[i]-rj[p])/rj[p]*100) : null;
   return `
+  <div class="PJE_panel"><h3>Rezago: procedimientos pendientes de concluir en Jalisco</h3>
+    <p class="PJE_nota">Suma de carpetas de investigación y averiguaciones previas pendientes.
+      La edición 2024 publica ambos universos en un solo cuadro y la edición 2025 los separa, por lo que
+      comparar sólo las carpetas entre un año y otro produce una caída que no existe.</p>
+    <div class="PJE_lienzo" id="PJE_g15"></div>
+    <div class="PJE_fuente">Fuente: INEGI. CNPJE, ediciones 2024 y 2025.</div></div>
+  ${rj[i]!=null?`<div class="PJE_hallazgo"><b>Jalisco acumula ${PJE_fmt(rj[i])} procedimientos
+    pendientes de concluir</b>${part?`, el ${part} % del rezago nacional`:""}${vr!==null?
+    `, y la cifra ${vr>0?"creció":"se redujo"} ${Math.abs(vr).toFixed(1)} % frente al año previo`:""}.
+    Es el mayor rezago del país.</div>`:""}
+  <div class="PJE_panel"><h3>Flujo de carpetas de investigación en Jalisco</h3>
+    <p class="PJE_nota">Lo que entra, lo que se determina y lo que queda pendiente.</p>
+    <div class="PJE_lienzo" id="PJE_g16"></div>
+    <div class="PJE_fuente">Fuente: INEGI. CNPJE, ediciones 2024 y 2025.</div></div>
   <div class="PJE_panel"><h3>Órdenes judiciales en Jalisco</h3>
     <p class="PJE_nota">Saldo al inicio, movimiento del año y saldo al cierre.</p>
     <div class="PJE_lienzo" id="PJE_g11"></div>
@@ -526,6 +555,14 @@ const PJE_ESP=["Especializada en violencia intrafamiliar/ Especializada en viole
 const PJE_ESPC=["Violencia familiar","Delitos contra las mujeres","Robos","Homicidios","Feminicidios",
   "Personas desaparecidas","Robo de vehículos"];
 function PJE_pintaJusticia(){
+  const ejes=PJE_EDS.map(e=>String(e.dato));
+  PJE_barras("PJE_g15",ejes,[{n:"Jalisco",d:PJE_rezago("j"),c:"#18345D"}]);
+  PJE_barras("PJE_g16",ejes,[
+    {n:"Abiertas",d:PJE_serie("CARPETAS","Carpetas de investigación abiertas").map(r=>r.j),c:"#C9D5E6"},
+    {n:"Determinaciones, investigación inicial",
+     d:PJE_serie("CARPETAS","Determinaciones en investigación inicial").map(r=>r.j),c:"#203A80"},
+    {n:"Pendientes de concluir",
+     d:PJE_serie("CARPETAS","Procedimientos pendientes de concluir").map(r=>r.j),c:"#18345D"}]);
   const ini=PJE_serie("ORDENES","Pendientes al inicio del año"),
         gir=PJE_serie("ORDENES","Giradas"), con=PJE_serie("ORDENES","Concluidas"),
         cie=PJE_serie("ORDENES","Pendientes al cierre del año");
